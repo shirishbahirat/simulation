@@ -1,0 +1,14 @@
+  533  g++ -dynamiclib -flat_namespace myclass.cpp -o myclass.so
+  535  g++ sim_init.cpp -o sim
+  538  ./sim
+  540  g++ -dynamiclib -flat_namespace transport.cpp -o transport.so
+  555  g++ -dynamiclib -flat_namespace media.cpp -o media.so
+  559  g++ -dynamiclib -flat_namespace error_mgmt.cpp -o error_mgmt.so
+  560  g++ sim_init.cpp -o sim
+  562  ./sim
+  567  g++ thread.cpp -pthread
+  569  ./a.out 
+  669  g++ -dynamiclib -flat_namespace producer.cpp -o producer.so
+  674  g++ -dynamiclib -flat_namespace consumer.cpp -o consumer.so
+  675  g++ main.cpp -o main
+  676  ./main 
