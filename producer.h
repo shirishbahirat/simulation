@@ -25,16 +25,16 @@ public:
 
   virtual void producer_thread_exit();
 
-private:
   bool start_producer_thread();
 
+private:
   static void *producer_thread_entry_function(void *module);
 
   virtual void execute();
 
-  virtual void enqueue() {}
+  virtual void enqueue();
 
-  virtual void dequeue() {}
+  virtual void dequeue();
 
   struct portq {
 

@@ -3,15 +3,12 @@
 
 #include "producer.h"
 
-pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t c = PTHREAD_COND_INITIALIZER;
-
 extern "C" producer *create_producer() { return new producer(); }
 
-producer::producer() : queue_size(32), number_of_commands(10), consumer(NULL) {
+producer::producer() : queue_size(32), number_of_commands(0), consumer(NULL) {
 
-  portq *equeue = new portq();
-  portq *dqueue = new portq();
+  equeue = new portq();
+  dqueue = new portq();
 
   equeue->capacity = 32;
   equeue->consumed = 0;
@@ -25,32 +22,44 @@ producer::producer() : queue_size(32), number_of_commands(10), consumer(NULL) {
   pthread_cond_init(&dqueue->cond, NULL);
   pthread_mutex_init(&dqueue->lock, NULL);
 
-  cout << "New Producer" << endl;
-  start_producer_thread();
+  cout << "New Producer " << equeue->capacity << endl;
 }
 
 void producer::connect(consumer_interface *cons) {
   assert(cons);
   consumer = cons;
+}
 
-  execute();
+void producer::enqueue() {
+
+  pthread_mutex_lock(&equeue->lock);
+
+  while (equeue->commands.size() >= equeue->capacity)
+    pthread_cond_wait(&equeue->cond, &equeue->lock);
+
+  equeue->commands.push(number_of_commands);
+  cout << equeue->commands.size() << endl;
+
+  pthread_cond_broadcast(&equeue->cond);
+  pthread_mutex_unlock(&equeue->lock);
+}
+
+void producer::dequeue() {
+
+  pthread_mutex_lock(&dqueue->lock);
+  while (equeue->commands.size() >= equeue->capacity)
+    pthread_cond_wait(&dqueue->cond, &dqueue->lock);
+
+  dqueue->commands.push(number_of_commands);
+
+  pthread_cond_broadcast(&dqueue->cond);
+  pthread_mutex_unlock(&dqueue->lock);
 }
 
 void producer::execute() {
-  while (number_of_commands) {
 
-    pthread_mutex_lock(&lock);
-    while (equeue->commands.size() >= queue_size)
-      pthread_cond_wait(&cond, &lock);
-
-    consumer->enqueue(number_of_commands);
-
-    pthread_cond_broadcast(&cond);
-    pthread_mutex_unlock(&lock);
-
-    cout << "Producer " << number_of_commands << endl;
-    --number_of_commands;
-  }
+  cout << "Producer Execute " << number_of_commands << endl;
+  ++number_of_commands;
 }
 
 bool producer::start_producer_thread() {
@@ -68,20 +77,24 @@ void *producer::producer_thread_entry_function(void *module) {
 }
 
 void *producer::producer_thread_function(void *arg) {
-  /*
-Node *item;
-command cmmd;
-cmmd.dest = 111;
-item = (Node *)malloc(sizeof(Node));
-item->data = (void *)&cmmd;
 
-while (1) {
-  portqEnqueue(inputPort, item);
-  moduleExecuteFunction();
-  portqEnqueue(outputPort, item);
-}
-*/
+  cout << "Started Producer Thread " << equeue->capacity << endl;
 
-  cout << "Started Producer Thread" << endl;
+  while (number_of_commands < 20) {
+    enqueue();
+    execute();
+    dequeue();
+  }
+
   return NULL;
+}
+
+int main(int argc, char const *argv[]) {
+
+  producer *prod = create_producer();
+
+  prod->start_producer_thread();
+  prod->producer_thread_exit();
+
+  return 0;
 }
