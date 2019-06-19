@@ -1,10 +1,29 @@
 #include <cassert>
+#include <pthread.h>
 
 #include "producer.h"
+
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t c = PTHREAD_COND_INITIALIZER;
 
 extern "C" producer *create_producer() { return new producer(); }
 
 producer::producer() : queue_size(32), number_of_commands(10), consumer(NULL) {
+
+  portq *equeue = new portq();
+  portq *dqueue = new portq();
+
+  equeue->capacity = 32;
+  equeue->consumed = 0;
+
+  pthread_cond_init(&equeue->cond, NULL);
+  pthread_mutex_init(&equeue->lock, NULL);
+
+  dqueue->capacity = 32;
+  dqueue->consumed = 0;
+
+  pthread_cond_init(&dqueue->cond, NULL);
+  pthread_mutex_init(&dqueue->lock, NULL);
 
   cout << "New Producer" << endl;
   start_producer_thread();
@@ -21,7 +40,7 @@ void producer::execute() {
   while (number_of_commands) {
 
     pthread_mutex_lock(&lock);
-    while (commands.size() >= queue_size)
+    while (equeue->commands.size() >= queue_size)
       pthread_cond_wait(&cond, &lock);
 
     consumer->enqueue(number_of_commands);

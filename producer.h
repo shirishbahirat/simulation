@@ -4,6 +4,11 @@
 #include <pthread.h>
 #include <queue>
 
+#include <signal.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 #include "interface.h"
 
 using namespace std;
@@ -27,7 +32,25 @@ private:
 
   virtual void execute();
 
-  queue<uint32_t> commands;
+  virtual void enqueue() {}
+
+  virtual void dequeue() {}
+
+  struct portq {
+
+    queue<uint32_t> commands;
+
+    uint32_t capacity;
+    uint32_t consumed;
+
+    pthread_mutex_t lock;
+
+    pthread_cond_t cond;
+  };
+
+  portq *equeue;
+
+  portq *dqueue;
 
   uint32_t queue_size;
 
