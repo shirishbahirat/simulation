@@ -7,7 +7,8 @@
 
 int main(int argc, char const *argv[]) {
 
-  void *phandle = dlopen("producer.so", RTLD_LAZY);
+  void *phandle = dlopen("libproducer.dylib", RTLD_LAZY);
+  // void *phandle = dlopen("producer.so", RTLD_LAZY);
   void *chandle = dlopen("consumer.so", RTLD_LAZY);
 
   producer *(*create_producer)();
