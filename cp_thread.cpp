@@ -15,8 +15,8 @@ void producer() {
   while (count > 0) {
     unique_lock<mutex> locker(mu);
     q.push_front(count);
-    locker.unlock();
     cond.notify_one();
+    locker.unlock();
     this_thread::sleep_for(chrono::seconds(1));
     count--;
   }
