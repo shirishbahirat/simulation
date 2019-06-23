@@ -30,15 +30,16 @@ void producer::connect(consumer_interface *cons) {
   consumer = cons;
 }
 
-void producer::enqueue() {
+void producer::enqueue(cmd *cp) {
 
   pthread_mutex_lock(&equeue->lock);
 
   while (equeue->commands.size() >= equeue->capacity)
     pthread_cond_wait(&equeue->cond, &equeue->lock);
 
-  equeue->commands.push(number_of_commands);
-  cout << equeue->commands.size() << endl;
+  equeue->commands.push(cp);
+  cout << "enqueue " << number_of_commands << " " << equeue->commands.size()
+       << endl;
 
   pthread_cond_broadcast(&equeue->cond);
   pthread_mutex_unlock(&equeue->lock);
@@ -47,10 +48,15 @@ void producer::enqueue() {
 void producer::dequeue() {
 
   pthread_mutex_lock(&dqueue->lock);
-  while (equeue->commands.size() >= equeue->capacity)
+  while ((equeue->commands.size() >= equeue->capacity) ||
+         (equeue->commands.size() <= 0))
     pthread_cond_wait(&dqueue->cond, &dqueue->lock);
 
-  dqueue->commands.push(number_of_commands);
+  cmd *cp = equeue->commands.front();
+  cout << "dequeue " << cp->source_id << endl;
+  equeue->commands.pop();
+
+  dqueue->commands.push(cp);
 
   pthread_cond_broadcast(&dqueue->cond);
   pthread_mutex_unlock(&dqueue->lock);
@@ -60,6 +66,11 @@ void producer::execute() {
 
   cout << "Producer Execute " << number_of_commands << endl;
   ++number_of_commands;
+}
+
+producer::cmd *producer::command_generator() {
+
+  return new cmd(NULL, number_of_commands, 0);
 }
 
 bool producer::start_producer_thread() {
@@ -79,9 +90,15 @@ void *producer::producer_thread_entry_function(void *module) {
 void *producer::producer_thread_function(void *arg) {
 
   cout << "Started Producer Thread " << equeue->capacity << endl;
-
+  cmd *cp = NULL;
   while (number_of_commands < 20) {
-    enqueue();
+
+    pthread_mutex_lock(&equeue->lock);
+    cp = command_generator();
+    pthread_cond_signal(&equeue->cond);
+    pthread_mutex_unlock(&equeue->lock);
+
+    enqueue(cp);
     execute();
     dequeue();
   }

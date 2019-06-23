@@ -28,17 +28,18 @@ public:
   bool start_producer_thread();
 
 private:
-  static void *producer_thread_entry_function(void *module);
+  struct cmd {
+    void *payload;
+    uint32_t source_id;
+    uint32_t dest_id;
 
-  virtual void execute();
-
-  virtual void enqueue();
-
-  virtual void dequeue();
+    cmd(void *p, uint32_t s, uint32_t d)
+        : payload(p), source_id(s), dest_id(d) {}
+  };
 
   struct portq {
 
-    queue<uint32_t> commands;
+    queue<cmd *> commands;
 
     uint32_t capacity;
     uint32_t consumed;
@@ -47,6 +48,8 @@ private:
 
     pthread_cond_t cond;
   };
+
+  cmd *command;
 
   portq *equeue;
 
@@ -63,4 +66,14 @@ private:
   pthread_cond_t cond;
 
   pthread_t producer_thread;
+
+  static void *producer_thread_entry_function(void *module);
+
+  virtual void execute();
+
+  virtual void enqueue(cmd *cp);
+
+  virtual void dequeue();
+
+  virtual cmd *command_generator();
 };
